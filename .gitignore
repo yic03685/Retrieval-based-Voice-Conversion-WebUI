@@ -5,3 +5,14 @@ __pycache__
 hubert_base.pt
 /logs
 .venv
+
+#models
+uvr5_weights
+rmvpe.pt
+
+#data input
+training_data
+input
+
+#output
+trained
