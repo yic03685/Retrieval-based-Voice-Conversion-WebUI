@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+import os
 from IPython.display import Audio
 from scipy.io.wavfile import write as write_wav
 
@@ -13,12 +14,20 @@ config = get_config_file("input/config.json")
 semantic_path = "semantic_output/pytorch_model.bin" # set to None if you don't want to use finetuned semantic
 coarse_path = "coarse_output/pytorch_model.bin" # set to None if you don't want to use finetuned coarse
 fine_path = "fine_output/pytorch_model.bin" # set to None if you don't want to use finetuned fine
-use_rvc = True # Set to False to use bark without RVC
+use_rvc = config["use_rvc"] # Set to False to use bark without RVC
 rvc_path = config.get("model_path")
 index_path = config.get("model_index_path")
 device="cuda:0"
 is_half=True
 
+
+import nltk  # we'll use this to split into sentences
+import numpy as np
+
+OUTPUT_FOLDER="output"
+
+# download and load all models
+nltk.download('punkt')
 
 # In[ ]:
 
@@ -46,31 +55,38 @@ if use_rvc:
 
 # generation with more control
 text_prompt = config.get("prompt")
-voice_name = "speaker_6" # use your custom voice name here if you have on
+voice_name = config.get("base_voice") # use your custom voice name here if you have on
 
-filepath = "output/audio.wav"
+filepath = os.path.join(OUTPUT_FOLDER, config.get("output_audio_path"))
 
-x_semantic = generate_text_semantic(
-    text_prompt,
-    history_prompt=voice_name,
-    temp=0.7,
-    top_k=50,
-    top_p=0.95,
-)
+sentences = nltk.sent_tokenize(text_prompt)
+silence = np.zeros(int(0.25 * SAMPLE_RATE))  # quarter second of silence
 
-x_coarse_gen = generate_coarse(
-    x_semantic,
-    history_prompt=voice_name,
-    temp=0.7,
-    top_k=50,
-    top_p=0.95,
-)
-x_fine_gen = generate_fine(
-    x_coarse_gen,
-    history_prompt=voice_name,
-    temp=0.5,
-)
-audio_array = codec_decode(x_fine_gen)
+pieces = []
+for sentence in sentences:
+    x_semantic = generate_text_semantic(
+        text_prompt,
+        history_prompt=voice_name,
+        temp=0.7,
+        top_k=50,
+        top_p=0.95,
+    )
+
+    x_coarse_gen = generate_coarse(
+        x_semantic,
+        history_prompt=voice_name,
+        temp=0.7,
+        top_k=50,
+        top_p=0.95,
+    )
+    x_fine_gen = generate_fine(
+        x_coarse_gen,
+        history_prompt=voice_name,
+        temp=0.45,
+    )
+    audio_array = codec_decode(x_fine_gen)
+    pieces += [audio_array, silence.copy()]
+result = np.concatenate(pieces)    
 write_wav(filepath, SAMPLE_RATE, audio_array)
 
 if use_rvc:
@@ -86,11 +102,6 @@ if use_rvc:
     except:
         audio_array = vc_single(0,filepath,f0up_key,None,'pm',index_path,index_rate, filter_radius=filter_radius, resample_sr=resample_sr, rms_mix_rate=rms_mix_rate, protect=protect)
     write_wav(filepath, SAMPLE_RATE, audio_array)
-
-# Audio(audio_array, rate=SAMPLE_RATE)
-
-
-# In[ ]:
 
 
 
