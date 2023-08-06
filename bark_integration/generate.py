@@ -5,7 +5,7 @@ from scipy.io.wavfile import write as write_wav
 
 from bark.api import generate_audio
 from bark.generation import SAMPLE_RATE, preload_models, codec_decode, generate_coarse, generate_fine, generate_text_semantic
-from integration.integration_utils import get_config_file
+from LearningBuddyCommon.integration.integration_utils import get_config_file
 
 # In[ ]:
 
