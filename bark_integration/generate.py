@@ -1,26 +1,21 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-# In[ ]:
-
-
 from IPython.display import Audio
 from scipy.io.wavfile import write as write_wav
 
 from bark.api import generate_audio
 from bark.generation import SAMPLE_RATE, preload_models, codec_decode, generate_coarse, generate_fine, generate_text_semantic
-
+from integration.integration_utils import get_config_file
 
 # In[ ]:
 
-
+config = get_config_file("input/config.json")
 semantic_path = "semantic_output/pytorch_model.bin" # set to None if you don't want to use finetuned semantic
 coarse_path = "coarse_output/pytorch_model.bin" # set to None if you don't want to use finetuned coarse
 fine_path = "fine_output/pytorch_model.bin" # set to None if you don't want to use finetuned fine
 use_rvc = True # Set to False to use bark without RVC
-rvc_name = 'model'
-rvc_path = f"trained/ian/{rvc_name}.pth"
-index_path = f"trained/ian/{rvc_name}.index"
+rvc_path = config.get("model_path")
+index_path = config.get("model_index_path")
 device="cuda:0"
 is_half=True
 
@@ -49,40 +44,9 @@ if use_rvc:
     get_vc(rvc_path, device, is_half)
 
 
-# In[ ]:
-
-
-# simple generation
-text_prompt = "Hello, my name is Serpy. And, uh — and I like pizza. [laughs]"
-voice_name = "speaker_0" # use your custom voice name here if you have on
-
-filepath = "output/audio.wav"
-audio_array = generate_audio(text_prompt, history_prompt=voice_name, text_temp=0.7, waveform_temp=0.7)
-write_wav(filepath, SAMPLE_RATE, audio_array)
-
-if use_rvc:
-    index_rate = 0.75
-    f0up_key = -6
-    filter_radius = 3
-    rms_mix_rate = 0.25
-    protect = 0.33
-    resample_sr = SAMPLE_RATE
-    f0method = "harvest" #harvest or pm
-    try:
-        audio_array = vc_single(0,filepath,f0up_key,None,f0method,index_path,index_rate, filter_radius=filter_radius, resample_sr=resample_sr, rms_mix_rate=rms_mix_rate, protect=protect)
-    except:
-        audio_array = vc_single(0,filepath,f0up_key,None,'pm',index_path,index_rate, filter_radius=filter_radius, resample_sr=resample_sr, rms_mix_rate=rms_mix_rate, protect=protect)
-    write_wav(filepath, SAMPLE_RATE, audio_array)
-
-Audio(audio_array, rate=SAMPLE_RATE)
-
-
-# In[ ]:
-
-
 # generation with more control
-text_prompt = "Hello, my name is Serpy. And, uh — and I like pizza. [laughs]"
-voice_name = "speaker_0" # use your custom voice name here if you have on
+text_prompt = config.get("prompt")
+voice_name = "speaker_6" # use your custom voice name here if you have on
 
 filepath = "output/audio.wav"
 
@@ -123,7 +87,7 @@ if use_rvc:
         audio_array = vc_single(0,filepath,f0up_key,None,'pm',index_path,index_rate, filter_radius=filter_radius, resample_sr=resample_sr, rms_mix_rate=rms_mix_rate, protect=protect)
     write_wav(filepath, SAMPLE_RATE, audio_array)
 
-Audio(audio_array, rate=SAMPLE_RATE)
+# Audio(audio_array, rate=SAMPLE_RATE)
 
 
 # In[ ]:
