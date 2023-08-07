@@ -36,7 +36,10 @@ python index_generator.py --model_name $MODEL_NAME
 # move models to the output folder
 printf "\n==Move models to output==\n"
 mkdir -p $MODEL_OUTPUT_FOLDER/$MODEL_NAME
-cp $TRAINING_WORKSPACE_FOLDER/$MODEL_NAME/added_IVF21_Flat_nprobe_1_${MODEL_NAME}_v2.index $MODEL_OUTPUT_FOLDER/$MODEL_NAME/model.index
+
+found_file=$(find $TRAINING_WORKSPACE_FOLDER/$MODEL_NAME -type f -name "added_IVF*" -print0 | tr '\0' ',')
+found_file=${found_file%,}
+cp $found_file $MODEL_OUTPUT_FOLDER/$MODEL_NAME/model.index
 cp $WEIGHTS_FOLDER/${MODEL_NAME}.pth $MODEL_OUTPUT_FOLDER/$MODEL_NAME/model.pth
 
 printf "\n==Finished!!==\n"
