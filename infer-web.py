@@ -37,7 +37,6 @@ from lib.audio import load_audio
 from lib.train.process_ckpt import change_info, extract_small_model, merge, show_info
 from vc_infer_pipeline import VC
 from sklearn.cluster import MiniBatchKMeans
-from filelist_generator import write_filelist
 
 logging.getLogger("numba").setLevel(logging.WARNING)
 
@@ -400,6 +399,7 @@ def uvr(model_name, inp_root, save_root_vocal, paths, save_root_ins, agg, format
             torch.cuda.empty_cache()
     yield "\n".join(infos)
 
+
 def get_index_path_from_model(sid):
     sel_index_path = ""
     name = os.path.join("logs", sid.split(".")[0], "")
@@ -410,6 +410,7 @@ def get_index_path_from_model(sid):
             sel_index_path = f
             break
     return sel_index_path
+
 
 # 一个选项卡全局只能有一个音色
 def get_vc(sid, to_return_protect0, to_return_protect1):
@@ -1144,8 +1145,64 @@ def train1key(
         print(f.read())
     #######step3a:训练模型
     yield get_info_str(i18n("step3a:正在训练模型"))
-    # # 生成filelist
-    write_filelist(exp_dir1, sr2, if_f0_3, spk_id5, version19)
+    # 生成filelist
+    if if_f0_3:
+        f0_dir = "%s/2a_f0" % model_log_dir
+        f0nsf_dir = "%s/2b-f0nsf" % model_log_dir
+        names = (
+            set([name.split(".")[0] for name in os.listdir(gt_wavs_dir)])
+            & set([name.split(".")[0] for name in os.listdir(feature_dir)])
+            & set([name.split(".")[0] for name in os.listdir(f0_dir)])
+            & set([name.split(".")[0] for name in os.listdir(f0nsf_dir)])
+        )
+    else:
+        names = set([name.split(".")[0] for name in os.listdir(gt_wavs_dir)]) & set(
+            [name.split(".")[0] for name in os.listdir(feature_dir)]
+        )
+    opt = []
+    for name in names:
+        if if_f0_3:
+            opt.append(
+                "%s/%s.wav|%s/%s.npy|%s/%s.wav.npy|%s/%s.wav.npy|%s"
+                % (
+                    gt_wavs_dir.replace("\\", "\\\\"),
+                    name,
+                    feature_dir.replace("\\", "\\\\"),
+                    name,
+                    f0_dir.replace("\\", "\\\\"),
+                    name,
+                    f0nsf_dir.replace("\\", "\\\\"),
+                    name,
+                    spk_id5,
+                )
+            )
+        else:
+            opt.append(
+                "%s/%s.wav|%s/%s.npy|%s"
+                % (
+                    gt_wavs_dir.replace("\\", "\\\\"),
+                    name,
+                    feature_dir.replace("\\", "\\\\"),
+                    name,
+                    spk_id5,
+                )
+            )
+    fea_dim = 256 if version19 == "v1" else 768
+    if if_f0_3:
+        for _ in range(2):
+            opt.append(
+                "%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature%s/mute.npy|%s/logs/mute/2a_f0/mute.wav.npy|%s/logs/mute/2b-f0nsf/mute.wav.npy|%s"
+                % (now_dir, sr2, now_dir, fea_dim, now_dir, now_dir, spk_id5)
+            )
+    else:
+        for _ in range(2):
+            opt.append(
+                "%s/logs/mute/0_gt_wavs/mute%s.wav|%s/logs/mute/3_feature%s/mute.npy|%s"
+                % (now_dir, sr2, now_dir, fea_dim, spk_id5)
+            )
+    shuffle(opt)
+    with open("%s/filelist.txt" % model_log_dir, "w") as f:
+        f.write("\n".join(opt))
     yield get_info_str("write filelist done")
     if gpus16:
         cmd = (
